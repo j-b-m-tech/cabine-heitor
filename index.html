@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1565c0">
+<title>Cabine do Heitor 🐶 4 anos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<link rel="preload" href="moldura.webp" as="image">
+<style>
+  :root { --azul:#1565c0; --azul2:#0d47a1; --vermelho:#e53935; --amarelo:#ffca28; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--azul2); color:#fff;
+    font-family:'Fredoka',system-ui,sans-serif; overflow:hidden; }
+  .tela { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
+    justify-content:center; padding:calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px); }
+  .tela.ativa { display:flex; }
+  #inicio { background:radial-gradient(circle at 50% 30%, #1e88e5, var(--azul2)); text-align:center; gap:16px; }
+  #inicio img { max-height:46vh; max-width:70vw; filter:drop-shadow(0 8px 18px rgba(0,0,0,.4)); }
+  #inicio p { margin:0; font-size:19px; max-width:340px; }
+  button { font-family:inherit; font-weight:700; border:0; border-radius:999px; cursor:pointer;
+    font-size:22px; padding:16px 30px; color:#fff; background:var(--vermelho);
+    box-shadow:0 6px 0 #b71c1c; transition:transform .08s; }
+  button:active { transform:translateY(4px); box-shadow:0 2px 0 #b71c1c; }
+  button.sec { background:#fff; color:var(--azul2); box-shadow:0 6px 0 #90a4ae; }
+  button[disabled] { opacity:.6; }
+  .erro { background:#fff; color:#b71c1c; border-radius:16px; padding:12px 16px; font-size:16px; max-width:360px; display:none; }
+
+  #camera { background:#000; gap:12px; justify-content:space-between; }
+  #palco { position:relative; overflow:hidden; border-radius:10px; background:#000; flex:none; }
+  #jeeFaceFilterCanvas { position:absolute; inset:0; width:100%; height:100%; transform:scaleX(-1); }
+  #molduraTela { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  #contagem { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:150px; font-weight:700; color:#fff; text-shadow:0 6px 0 var(--vermelho), 0 0 30px rgba(0,0,0,.5);
+    pointer-events:none; }
+  #flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .35s; }
+  #aviso { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(0,0,0,.6); padding:10px 18px; border-radius:999px; font-size:17px; white-space:nowrap; }
+  #controles { display:flex; justify-content:center; align-items:center; gap:28px; flex:none; }
+  #disparo { width:78px; height:78px; padding:0; border-radius:50%; background:#fff;
+    border:6px solid var(--vermelho); box-shadow:0 0 0 4px #fff, 0 6px 16px rgba(0,0,0,.4); font-size:32px; }
+  #disparo:active { transform:scale(.92); }
+  .mini { width:54px; height:54px; padding:0; border-radius:50%; font-size:24px;
+    background:rgba(255,255,255,.92); color:var(--azul2); box-shadow:0 4px 10px rgba(0,0,0,.35); }
+
+  #resultado { background:radial-gradient(circle at 50% 20%, #1e88e5, var(--azul2)); gap:14px; }
+  #foto { max-width:100%; max-height:calc(100% - 150px); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    -webkit-touch-callout:default; }
+  #botoes { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  #dica { font-size:14px; opacity:.85; text-align:center; max-width:340px; margin:0; }
+</style>
+</head>
+<body>
+
+<section id="inicio" class="tela ativa">
+  <img src="moldura.webp" alt="Moldura da festa do Heitor">
+  <p>Vire um filhotinho e tire sua foto da festa! 🐶</p>
+  <button id="btnIniciar">📸 Abrir câmera</button>
+  <div class="erro" id="erro"></div>
+</section>
+
+<section id="camera" class="tela">
+  <div id="palco">
+    <canvas id="jeeFaceFilterCanvas"></canvas>
+    <img id="molduraTela" src="moldura.webp" alt="">
+    <div id="contagem"></div>
+    <div id="flash"></div>
+    <div id="aviso">Preparando o filtro… 🐶</div>
+  </div>
+  <div id="controles">
+    <button class="mini" id="btnFiltro" title="Liga/desliga o filtro">🐶</button>
+    <button id="disparo" aria-label="Tirar foto">📷</button>
+    <span class="mini" style="visibility:hidden"></span>
+  </div>
+</section>
+
+<section id="resultado" class="tela">
+  <img id="foto" alt="Sua foto da festa">
+  <div id="botoes">
+    <button id="btnSalvar">💾 Salvar foto</button>
+    <button class="sec" id="btnDeNovo">🔁 Outra</button>
+  </div>
+  <p id="dica"></p>
+</section>
+
+<!-- Rastreamento facial + filtro 3D de cachorro: Jeeliz FaceFilter (Apache 2.0) -->
+<script src="libs/jeelizFaceFilter.js"></script>
+<script src="libs/three.min.js"></script>
+<script src="libs/JeelizResizer.js"></script>
+<script src="libs/JeelizThreeHelper.js"></script>
+<script src="libs/ThreeFlexMaterial.js"></script>
+<script src="libs/Tween.min.js"></script>
+<script>
+// ================= PERSONALIZE AQUI =================
+const NOME = 'Heitor';
+const MOLDURA = 'moldura.webp';      // arte da moldura (centro transparente)
+const W = 941, H = 1672;             // tamanho da foto final = tamanho da arte
+// ====================================================
+
+const $ = id => document.getElementById(id);
+const molduraImg = new Image(); molduraImg.src = MOLDURA;
+let iniciado = false, filtroLigado = true, blobFoto = null;
+
+function mostrar(id){ document.querySelectorAll('.tela').forEach(s => s.classList.toggle('ativa', s.id === id)); }
+
+// encaixa o palco (proporção da moldura) na tela, deixando espaço para os botões
+function ajustarPalco(){
+  const tela = $('camera'), cs = getComputedStyle(tela);
+  const livreW = innerWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const livreH = innerHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 78 - 12;
+  const r = Math.min(livreW / W, livreH / H);
+  $('palco').style.width = Math.floor(W * r) + 'px';
+  $('palco').style.height = Math.floor(H * r) + 'px';
+}
+
+// ---------- Filtro 3D ----------
+let DOG = null, EARMESH = null, NOSEMESH = null, TONGUEMESH = null, MIXER = null, ACTION = null, CAMERA3D = null;
+let carregado = false, acima = false, abaixo = true, animando = false, opaco = false, linguaFora = false, animFim = false;
+
+function montarCena(spec){
+  const three = JeelizThreeHelper.init(spec, () => {});
+  DOG = new THREE.Object3D();
+  const lm = new THREE.LoadingManager();
+  const tex = u => new THREE.TextureLoader().load(u);
+
+  new THREE.BufferGeometryLoader(lm).load('dog/dog_ears.json', g => {
+    const mat = new THREE.FlexMaterial({
+      map: tex('dog/texture_ears.jpg'), flexMap: tex('dog/flex_ears_256.jpg'), alphaMap: tex('dog/alpha_ears_256.jpg'),
+      transparent: true, opacity: 1, bumpMap: tex('dog/normal_ears.jpg'), bumpScale: 0.0075, shininess: 1.5, specular: 0xffffff
+    });
+    EARMESH = new THREE.Mesh(g, mat);
+    EARMESH.scale.multiplyScalar(0.025); EARMESH.position.setY(-0.3);
+    EARMESH.frustumCulled = false; EARMESH.renderOrder = 10000; EARMESH.material.opacity.value = 1;
+  });
+  new THREE.BufferGeometryLoader(lm).load('dog/dog_nose.json', g => {
+    const mat = new THREE.MeshPhongMaterial({
+      map: tex('dog/texture_nose.jpg'), shininess: 1.5, specular: 0xffffff, bumpMap: tex('dog/normal_nose.jpg'), bumpScale: 0.005
+    });
+    NOSEMESH = new THREE.Mesh(g, mat);
+    NOSEMESH.scale.multiplyScalar(0.018); NOSEMESH.position.set(0, -0.05, 0.15);
+    NOSEMESH.frustumCulled = false; NOSEMESH.renderOrder = 10000;
+  });
+  new THREE.JSONLoader(lm).load('dog/dog_tongue.json', g => {
+    g.computeMorphNormals();
+    const mat = new THREE.FlexMaterial({
+      map: tex('dog/dog_tongue.jpg'), flexMap: tex('dog/flex_tongue_256.png'), alphaMap: tex('dog/tongue_alpha_256.jpg'),
+      transparent: true, morphTargets: true, opacity: 1
+    });
+    TONGUEMESH = new THREE.Mesh(g, mat);
+    TONGUEMESH.material.opacity.value = 0;
+    TONGUEMESH.scale.multiplyScalar(2); TONGUEMESH.position.setY(-0.28);
+    TONGUEMESH.frustumCulled = false; TONGUEMESH.visible = false;
+    MIXER = new THREE.AnimationMixer(TONGUEMESH);
+    ACTION = MIXER.clipAction(TONGUEMESH.geometry.animations[0]);
+    ACTION.noLoop = true; ACTION.play();
+  });
+  lm.onLoad = () => {
+    DOG.add(EARMESH); DOG.add(NOSEMESH); DOG.add(TONGUEMESH);
+    DOG.visible = filtroLigado;
+    three.faceObject.add(DOG);
+    carregado = true;
+    $('aviso').style.display = 'none';
+  };
+  three.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  const luz = new THREE.DirectionalLight(0xffffff, 0.5); luz.position.set(100, 1000, 1000); three.scene.add(luz);
+  CAMERA3D = JeelizThreeHelper.create_camera();
+}
+
+function animarLingua(mesh, voltar){
+  mesh.visible = true;
+  if (voltar){
+    ACTION.timescale = -1; ACTION.paused = false;
+    setTimeout(() => {
+      ACTION.paused = true; opaco = false; linguaFora = false; animando = false; animFim = true;
+      new TWEEN.Tween(mesh.material.opacity).to({ value: 0 }, 150).start();
+    }, 150);
+  } else {
+    ACTION.timescale = 1; ACTION.reset(); ACTION.paused = false;
+    new TWEEN.Tween(mesh.material.opacity).to({ value: 1 }, 100).onComplete(() => {
+      opaco = true;
+      setTimeout(() => { ACTION.paused = true; animando = false; linguaFora = true; animFim = true; }, 150);
+    }).start();
+  }
+}
+
+function aCadaQuadro(ds){
+  if (window.__fakeDetect) window.__fakeDetect(ds);   // usado só em testes
+  if (JeelizThreeHelper.get_isDetected()){
+    const q = new THREE.Euler();
+    for (const [m, k] of [[EARMESH, 0.1], [TONGUEMESH, 0.3]])
+      if (m && m.material.set_amortized)
+        m.material.set_amortized(m.getWorldPosition(new THREE.Vector3()), m.getWorldScale(new THREE.Vector3()), m.getWorldQuaternion(q), false, k);
+    // boca aberta -> língua sai; abre de novo -> língua volta
+    const boca = ds.expressions[0];
+    if (boca >= 0.85 && !acima){ acima = true; abaixo = false; animFim = false; }
+    if (boca <= 0.1 && !abaixo){ acima = false; abaixo = true; animFim = false; }
+    if (carregado && acima && !animando && !animFim){ animando = true; animarLingua(TONGUEMESH, linguaFora); }
+  }
+  TWEEN.update();
+  if (opaco) MIXER.update(0.16);
+  JeelizThreeHelper.render(ds, CAMERA3D);
+}
+
+function iniciarFiltro(){
+  const erro = $('erro'); erro.style.display = 'none';
+  $('btnIniciar').disabled = true;
+  mostrar('camera'); ajustarPalco();
+  JeelizResizer.size_canvas({
+    canvasId: 'jeeFaceFilterCanvas',
+    overSamplingFactor: Math.min(window.devicePixelRatio || 1, 2),
+    callback: (isErr, bestVideoSettings) => {
+      JEELIZFACEFILTER.init({
+        canvasId: 'jeeFaceFilterCanvas',
+        NNCPath: 'neuralNets/',
+        videoSettings: bestVideoSettings,
+        callbackReady: (errCode, spec) => {
+          $('btnIniciar').disabled = false;
+          if (errCode){
+            console.error(errCode);
+            mostrar('inicio');
+            erro.textContent = errCode === 'WEBCAM_UNAVAILABLE'
+              ? 'Não conseguimos abrir a câmera. Toque em “Permitir” quando o celular perguntar e tente de novo.'
+              : 'Seu celular não conseguiu abrir o filtro (' + errCode + '). Tente pelo Chrome (Android) ou Safari (iPhone).';
+            erro.style.display = 'block';
+            return;
+          }
+          iniciado = true;
+          montarCena(spec);
+        },
+        callbackTrack: aCadaQuadro
+      });
+    }
+  });
+}
+addEventListener('resize', () => { if ($('camera').classList.contains('ativa')){ ajustarPalco(); if (iniciado) JEELIZFACEFILTER.resize(); } });
+
+// ---------- Foto ----------
+const espera = ms => new Promise(r => setTimeout(r, ms));
+async function tirarFoto(){
+  const btn = $('disparo'); if (btn.disabled || !iniciado) return; btn.disabled = true;
+  const cont = $('contagem');
+  for (const n of [3, 2, 1]){ cont.textContent = n; await espera(800); }
+  cont.textContent = '';
+  const flash = $('flash'); flash.style.transition = 'none'; flash.style.opacity = 1;
+  requestAnimationFrame(() => { flash.style.transition = 'opacity .35s'; flash.style.opacity = 0; });
+
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.save(); g.translate(W, 0); g.scale(-1, 1);                 // espelha como a tela (selfie)
+  g.drawImage($('jeeFaceFilterCanvas'), 0, 0, W, H);
+  g.restore();
+  if (molduraImg.complete && molduraImg.naturalWidth) g.drawImage(molduraImg, 0, 0, W, H);
+  blobFoto = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+
+  const foto = $('foto');
+  if (foto.src.startsWith('blob:')) URL.revokeObjectURL(foto.src);
+  foto.src = URL.createObjectURL(blobFoto);
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('dica').textContent = ios
+    ? 'No iPhone: toque em “Salvar foto” e escolha “Salvar Imagem”. Ou segure o dedo na foto.'
+    : 'Toque em “Salvar foto” para guardar na galeria ou mandar no WhatsApp/Instagram.';
+  btn.disabled = false;
+  mostrar('resultado');
+}
+async function salvarFoto(){
+  if (!blobFoto) return;
+  const nome = `festa-${NOME.toLowerCase()}-${Date.now()}.jpg`;
+  const arquivo = new File([blobFoto], nome, { type: 'image/jpeg' });
+  if (navigator.canShare?.({ files: [arquivo] })){
+    try { await navigator.share({ files: [arquivo], title: `Festa do ${NOME}` }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blobFoto); a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+$('btnIniciar').onclick = () => { if (iniciado){ mostrar('camera'); ajustarPalco(); } else iniciarFiltro(); };
+$('disparo').onclick = tirarFoto;
+$('btnFiltro').onclick = () => {
+  filtroLigado = !filtroLigado; if (DOG) DOG.visible = filtroLigado;
+  $('btnFiltro').style.opacity = filtroLigado ? 1 : .45;
+};
+$('btnSalvar').onclick = salvarFoto;
+$('btnDeNovo').onclick = () => { mostrar('camera'); ajustarPalco(); };
+</script>
+</body>
+</html>
