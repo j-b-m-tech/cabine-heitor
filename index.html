@@ -98,6 +98,7 @@ const NOME = 'Heitor';
 const MOLDURA = 'moldura.webp';      // arte da moldura (centro transparente)
 const W = 941, H = 1672;             // tamanho da foto final = tamanho da arte
 const TAMANHO_FILTRO = 1.3;          // 1 = original; aumente para orelhas/focinho maiores
+const BOCA_ABERTA = 0.55;            // quanto abrir a boca para a língua sair (original 0.85; menor = mais fácil)
 // ====================================================
 
 const $ = id => document.getElementById(id);
@@ -196,7 +197,7 @@ function aCadaQuadro(ds){
         m.material.set_amortized(m.getWorldPosition(new THREE.Vector3()), m.getWorldScale(new THREE.Vector3()), m.getWorldQuaternion(q), false, k);
     // boca aberta -> língua sai; abre de novo -> língua volta
     const boca = ds.expressions[0];
-    if (boca >= 0.85 && !acima){ acima = true; abaixo = false; animFim = false; }
+    if (boca >= BOCA_ABERTA && !acima){ acima = true; abaixo = false; animFim = false; }
     if (boca <= 0.1 && !abaixo){ acima = false; abaixo = true; animFim = false; }
     if (carregado && acima && !animando && !animFim){ animando = true; animarLingua(TONGUEMESH, linguaFora); }
   }

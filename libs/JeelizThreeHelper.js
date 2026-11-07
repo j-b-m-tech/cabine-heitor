@@ -8,7 +8,7 @@ const JeelizThreeHelper = (function(){
     rotationOffsetX: 0.0, // negative -> look upper. in radians
     pivotOffsetYZ: [0.2, 0.6],// YZ of the distance between the center of the cube and the pivot
     
-    detectionThreshold: 0.8, // sensibility, between 0 and 1. Less -> more sensitive
+    detectionThreshold: 0.6, // sensibility, between 0 and 1. Less -> more sensitive
     detectionHysteresis: 0.02,
 
     //tweakMoveYRotateX: 0,//0.5, // tweak value: move detection window along Y axis when rotate the face around X (look up <-> down)
